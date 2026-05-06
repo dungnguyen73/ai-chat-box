@@ -8,7 +8,19 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get("/", (req: express.Request, res: express.Response) => {
-    res.send('Hello World!' );
+    res.send('Hello World!');
+})
+
+//health check api
+app.get("/api/health", (req: express.Request, res: express.Response) => {
+    res.send({
+        message: "OK",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        port: port,
+        hostname: req.hostname,
+        protocol: req.protocol
+    });
 })
 
 app.listen(port, () => {
