@@ -5,11 +5,16 @@
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run index.ts"
+    "dev": "bun run index.ts",
+    "format": "prettier \"packages/**/*.ts\" --write",
+    "prepare": "husky"
   },
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.0",
+    "prettier": "^3.8.3"
   },
   "peerDependencies": {
     "typescript": "^5"

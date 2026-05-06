@@ -35,15 +35,15 @@ function App() {
         setMessage(JSON.stringify(err));
       })
       .finally(() => {
-        setLoading(false);
+        setLoading(false)
       })
   }
   return (
     <>
       <Button variant="outline" onClick={() => {
         getHealthCheckStatus();
-        setIsShowHealth(!isShowHealth)
-      }}>{isShowHealth ? `Hide Health` : `Click to view Health`}</Button>
+                  setIsShowHealth(!isShowHealth)
+                }}>{isShowHealth ? `Hide Health` : `Click to view Health`}</Button>
       {isShowHealth && <p className='text-center text-2xl font-bold mt-4'>health check status: {loading ? "Loading..." : message}</p>}
     </>
   )
