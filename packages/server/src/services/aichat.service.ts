@@ -18,7 +18,6 @@ export class AIChatService {
             ? conversationRepository.getHistory(conversationId)
             : [];
 
-        // TRANSLATION: Generic -> Gemini Format
         const geminiHistory: Content[] = genericHistory.map((msg) => ({
             role: msg.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: msg.content }],
@@ -58,13 +57,11 @@ export class AIChatService {
             ? conversationRepository.getHistory(conversationId)
             : [];
 
-        // TRANSLATION: Generic -> OpenAI Format
         const openaiMessages: any[] = genericHistory.map((msg) => ({
             role: msg.role === 'assistant' ? 'assistant' : 'user',
             content: msg.content,
         }));
 
-        // Add current prompt
         openaiMessages.push({ role: 'user', content: prompt });
 
         const response = await openaiClient.chat.completions.create({
