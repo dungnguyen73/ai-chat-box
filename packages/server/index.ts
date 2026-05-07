@@ -3,7 +3,7 @@ import * as process from 'node:process';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI, type Content } from '@google/generative-ai';
-
+import z from 'zod';
 dotenv.config();
 
 // Initialize AI Clients
@@ -23,7 +23,7 @@ app.get('/', (req: express.Request, res: express.Response) => {
     res.send('Hello World!');
 });
 
-//health check api
+// health check api
 app.get('/api/health', (req: express.Request, res: express.Response) => {
     res.send({
         message: 'OK',
@@ -38,17 +38,41 @@ app.get('/api/health', (req: express.Request, res: express.Response) => {
 // --- AI Endpoints ---
 
 // conversationId -> lastResponseId
-const conversation = new Map<string, Content[]>();
+const conversations = new Map<string, Content[]>();
 
-// Gemini Endpoint (Free Tier)
+const chatSchema = z.object({
+    prompt: z
+        .string()
+        .trim()
+        .min(1, 'Prompt is required!')
+        .max(500, 'Prompt must be at most 500 characters long'),
+    temperature: z
+        .number()
+        .min(0, 'Temperature must be at least 0')
+        .max(1, 'Temperature must be at most 1')
+        .optional(),
+    maxTokens: z.number().min(1, 'Max tokens must be at least 1').optional(),
+    conversationId: z.uuid(),
+});
+// Gemini Endpoint
 app.post(
     '/api/chat/gemini',
     async (req: express.Request, res: express.Response) => {
-        const { prompt, temperature, maxTokens, conversationId } = req.body;
+        const parseResult = chatSchema.safeParse(req.body);
+
+        if (!parseResult.success) {
+            return res.status(400).json({
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const { prompt, temperature, maxTokens, conversationId } =
+            parseResult.data;
 
         try {
             const chatSession = geminiModel.startChat({
-                history: conversation.get(conversationId) || [],
+                history: conversations.get(conversationId) || [],
                 generationConfig: {
                     temperature: temperature ?? 0.2,
                     maxOutputTokens: maxTokens ?? 100,
@@ -60,8 +84,8 @@ app.post(
 
             // Set conversation state
             if (conversationId) {
-                conversation.set(conversationId, [
-                    ...(conversation.get(conversationId) || []),
+                conversations.set(conversationId, [
+                    ...(conversations.get(conversationId) || []),
                     { role: 'user', parts: [{ text: prompt }] },
                     { role: 'model', parts: [{ text }] },
                 ]);
@@ -80,7 +104,7 @@ app.post(
     }
 );
 
-// OpenAI Endpoint (Paid Tier)
+// OpenAI Endpoint
 app.post(
     '/api/chat/openai',
     async (req: express.Request, res: express.Response) => {
