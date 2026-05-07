@@ -2,7 +2,6 @@ import { conversationRepository } from '../repositories/conversation.repository'
 import { geminiModel, openaiClient } from '../config/ai.config';
 import type { ChatMessage } from '../types/chat.types';
 import type { Content } from '@google/generative-ai';
-import { uuid } from 'zod';
 
 type ChatResponse = {
     id: string;
@@ -46,7 +45,7 @@ export class AIChatService {
         }
 
         return {
-            id: uuid().toString(),
+            id: crypto.randomUUID(),
             message: text,
         };
     }
