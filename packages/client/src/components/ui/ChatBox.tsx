@@ -26,11 +26,12 @@ type Message = {
 
 const ChatBox = () => {
     const [messages, setMessages] = useState<Message[]>([]);
-    // const [prompts, setPrompts] = useState<string[]>([]);
+    const [isBotTyping, setIsBotTyping] = useState(false);
     const conversationId = useRef(crypto.randomUUID());
     const { register, handleSubmit, reset, formState } = useForm<FormData>();
 
     const onSubmit = async (data: FormData) => {
+        setIsBotTyping(true);
         reset();
 
         setMessages((prevs) => [
@@ -51,6 +52,7 @@ const ChatBox = () => {
             ...prevs,
             { content: aiMessage, role: 'model' },
         ]);
+        setIsBotTyping(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
@@ -61,21 +63,29 @@ const ChatBox = () => {
     };
 
     return (
-        <div>
+        <div className="flex flex-col">
             <div className="flex flex-col items-start gap-4 mb-8">
                 {messages.map((message, index) => (
                     <p
                         key={index}
-                        className={`w-fit p-4 rounded-xl ${
+                        className={`w-fit p-4 rounded-2xl ${
                             message.role === 'user'
-                                ? 'ml-auto bg-blue-500 text-white'
-                                : 'mr-auto bg-gray-200 text-black'
+                                ? 'self-end bg-blue-500 text-white'
+                                : 'self-start bg-gray-200 text-black'
                         }`}
                     >
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                     </p>
                 ))}
             </div>
+
+            {isBotTyping && (
+                <div className="flex self-start gap-2 px-3 py-3 mb-4 bg-gray-200 rounded-2xl">
+                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce delay-150"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce delay-300"></div>
+                </div>
+            )}
 
             <form
                 onSubmit={handleSubmit(onSubmit)}
@@ -93,7 +103,7 @@ const ChatBox = () => {
                 />
                 <Button
                     type="submit"
-                    disabled={!formState.isValid}
+                    disabled={!formState.isValid || isBotTyping}
                     className="rounded-full w-9 h-9"
                 >
                     <FaArrowUp />
