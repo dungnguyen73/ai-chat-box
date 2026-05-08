@@ -1,156 +1,81 @@
-import { Button } from './button';
-import { FaArrowUp } from 'react-icons/fa';
-import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-
-type FormData = {
-    prompt: string;
-};
-
-type ChatResponse = {
-    data: {
-        message: {
-            message: string;
-            id: string;
-        };
-        source: string;
-    };
-};
-
-type Message = {
-    content: string;
-    role: 'user' | 'model';
-};
+import type { Message, ChatResponse } from '../chat/types';
+import ChatMessages from '../chat/ChatMessages';
+import ChatInput from '../chat/ChatInput';
 
 const ChatBox = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isBotTyping, setIsBotTyping] = useState(false);
-    const [error, setError] = useState<String>('');
+    const [error, setError] = useState<string>('');
     const lastMessageRef = useRef<HTMLDivElement | null>(null);
-
     const conversationId = useRef(crypto.randomUUID());
-    const { register, handleSubmit, reset, formState } = useForm<FormData>();
 
+    // Scroll to bottom on new messages
     useEffect(() => {
-        if (!lastMessageRef.current) return;
-        lastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (lastMessageRef.current) {
+            lastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, isBotTyping]);
 
-    const onSubmit = async (data: FormData) => {
+    const handleSendMessage = async (content: string) => {
         try {
+            setError('');
             setIsBotTyping(true);
-            reset();
 
-            setMessages((prevs) => [
-                ...prevs,
-                { content: data.prompt, role: 'user' },
-            ]);
+            // Optimistic update for user message
+            setMessages((prev) => [...prev, { content, role: 'user' }]);
 
-            const { data: response }: ChatResponse = await axios.post(
+            const { data: response }: { data: ChatResponse } = await axios.post(
                 '/api/chat/gemini',
                 {
-                    prompt: data.prompt,
+                    prompt: content,
                     conversationId: conversationId.current,
                 }
             );
 
             const aiMessage = response.message.message;
-            setMessages((prevs) => [
-                ...prevs,
+            setMessages((prev) => [
+                ...prev,
                 { content: aiMessage, role: 'model' },
             ]);
-            setIsBotTyping(false);
         } catch (err) {
-            console.error(err);
-            setMessages((prevs) => [
-                ...prevs,
-                { content: 'Something went wrong', role: 'model' },
+            console.error('Chat error:', err);
+            setError('Failed to get a response from the AI. Please try again.');
+
+            // Optionally add the error message to the chat
+            setMessages((prev) => [
+                ...prev,
+                {
+                    content:
+                        '⚠️ Error: Something went wrong with the connection.',
+                    role: 'model',
+                },
             ]);
-            setError('Something went wrong');
-            setIsBotTyping(false);
         } finally {
             setIsBotTyping(false);
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit(onSubmit)();
-        }
-    };
-
-    const onCopyMessage = (e: React.ClipboardEvent) => {
-        const selection = window.getSelection().toString().trim();
-        if (selection) {
-            e.preventDefault();
-            e.clipboardData.setData('text/plain', selection);
-        }
-    };
     return (
-        <div className="flex flex-col h-[calc(100vh-6rem)] p-4">
-            <div className="flex flex-col items-start gap-4 mb-8 overflow-auto">
-                {messages.map((message, index) => (
-                    <div
-                        key={index}
-                        ref={
-                            index === messages.length - 1
-                                ? lastMessageRef
-                                : null
-                        }
-                        onCopy={onCopyMessage}
-                        className={`w-fit p-4 rounded-2xl ${
-                            message.role === 'user'
-                                ? 'self-end bg-blue-500 text-white'
-                                : 'self-start bg-gray-200 text-black'
-                        }`}
-                    >
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
-                    </div>
-                ))}
+        <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl mx-auto w-full glass-morphism rounded-3xl shadow-2xl overflow-hidden border border-gray-100 bg-white/80 backdrop-blur-md">
+            <header className="p-6 border-b border-gray-100 bg-linear-to-r from-blue-600 to-indigo-600 text-white"></header>
+
+            <div className="flex-1 overflow-hidden flex flex-col p-6">
+                <ChatMessages
+                    messages={messages}
+                    isBotTyping={isBotTyping}
+                    error={error}
+                    scrollRef={lastMessageRef}
+                />
             </div>
 
-            {isBotTyping && (
-                <div className="flex self-start gap-2 px-3 py-3 mb-4 bg-gray-200 rounded-2xl">
-                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce"></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce delay-150"></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-600 text-gray-600 animate-bounce delay-300"></div>
-                </div>
-            )}
-
-            {error && (
-                <div className="mb-4">
-                    <p className="text-red-700">
-                        Something went wrong, try again! {error}
-                    </p>
-                </div>
-            )}
-
-            <form
-                onSubmit={handleSubmit(onSubmit)}
-                onKeyDown={handleKeyDown}
-                className="flex flex-col gap-2 items-end border-2 p-4 border-gray-600 rounded-2xl"
-            >
-                <textarea
-                    autoFocus
-                    {...register('prompt', {
-                        required: true,
-                        validate: (data) => data.trim().length > 0,
-                        maxLength: 1000,
-                    })}
-                    className="w-full p-4 focus:ring-0 outline-none"
-                    placeholder="Type your message here..."
+            <footer className="p-6 pt-0">
+                <ChatInput
+                    onSendMessage={handleSendMessage}
+                    disabled={isBotTyping}
                 />
-                <Button
-                    type="submit"
-                    disabled={!formState.isValid || isBotTyping}
-                    className="rounded-full w-9 h-9"
-                >
-                    <FaArrowUp />
-                </Button>
-            </form>
+            </footer>
         </div>
     );
 };
