@@ -26,8 +26,11 @@
     letter-spacing: 0.18px;
     color-scheme: light dark;
     color: var(--text);
-    background: var(--bg);
+    background: linear-gradient(-45deg, #f8fafc, #f1f5f9, #e2e8f0, #f8fafc);
+    background-size: 400% 400%;
+    animation: bodyGradient 15s ease infinite;
     font-synthesis: none;
+
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -187,5 +190,17 @@
 @layer utilities {
     .glass-morphism {
         @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
+    }
+}
+
+@keyframes bodyGradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
     }
 }
