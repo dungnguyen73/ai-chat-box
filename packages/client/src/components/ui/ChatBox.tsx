@@ -27,39 +27,52 @@ type Message = {
 const ChatBox = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isBotTyping, setIsBotTyping] = useState(false);
-    const formRef = useRef<HTMLFormElement | null>(null);
+    const [error, setError] = useState<String>('');
+    const lastMessageRef = useRef<HTMLDivElement | null>(null);
 
     const conversationId = useRef(crypto.randomUUID());
     const { register, handleSubmit, reset, formState } = useForm<FormData>();
 
     useEffect(() => {
-        if (!formRef.current) return;
-        formRef.current.scrollIntoView({ behavior: 'smooth' });
+        if (!lastMessageRef.current) return;
+        lastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
     const onSubmit = async (data: FormData) => {
-        setIsBotTyping(true);
-        reset();
+        try {
+            setIsBotTyping(true);
+            reset();
 
-        setMessages((prevs) => [
-            ...prevs,
-            { content: data.prompt, role: 'user' },
-        ]);
+            setMessages((prevs) => [
+                ...prevs,
+                { content: data.prompt, role: 'user' },
+            ]);
 
-        const { data: response }: ChatResponse = await axios.post(
-            '/api/chat/gemini',
-            {
-                prompt: data.prompt,
-                conversationId: conversationId.current,
-            }
-        );
+            const { data: response }: ChatResponse = await axios.post(
+                '/api/chat/gemini',
+                {
+                    prompt: data.prompt,
+                    conversationId: conversationId.current,
+                }
+            );
 
-        const aiMessage = response.message.message;
-        setMessages((prevs) => [
-            ...prevs,
-            { content: aiMessage, role: 'model' },
-        ]);
-        setIsBotTyping(false);
+            const aiMessage = response.message.message;
+            setMessages((prevs) => [
+                ...prevs,
+                { content: aiMessage, role: 'model' },
+            ]);
+            setIsBotTyping(false);
+        } catch (err) {
+            console.error(err);
+            setMessages((prevs) => [
+                ...prevs,
+                { content: 'Something went wrong', role: 'model' },
+            ]);
+            setError('Something went wrong');
+            setIsBotTyping(false);
+        } finally {
+            setIsBotTyping(false);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
@@ -77,11 +90,16 @@ const ChatBox = () => {
         }
     };
     return (
-        <div className="flex flex-col">
-            <div className="flex flex-col items-start gap-4 mb-8">
+        <div className="flex flex-col h-[calc(100vh-6rem)] p-4">
+            <div className="flex flex-col items-start gap-4 mb-8 overflow-auto">
                 {messages.map((message, index) => (
-                    <p
+                    <div
                         key={index}
+                        ref={
+                            index === messages.length - 1
+                                ? lastMessageRef
+                                : null
+                        }
                         onCopy={onCopyMessage}
                         className={`w-fit p-4 rounded-2xl ${
                             message.role === 'user'
@@ -90,7 +108,7 @@ const ChatBox = () => {
                         }`}
                     >
                         <ReactMarkdown>{message.content}</ReactMarkdown>
-                    </p>
+                    </div>
                 ))}
             </div>
 
@@ -102,13 +120,21 @@ const ChatBox = () => {
                 </div>
             )}
 
+            {error && (
+                <div className="mb-4">
+                    <p className="text-red-700">
+                        Something went wrong, try again! {error}
+                    </p>
+                </div>
+            )}
+
             <form
-                ref={formRef}
                 onSubmit={handleSubmit(onSubmit)}
                 onKeyDown={handleKeyDown}
                 className="flex flex-col gap-2 items-end border-2 p-4 border-gray-600 rounded-2xl"
             >
                 <textarea
+                    autoFocus
                     {...register('prompt', {
                         required: true,
                         validate: (data) => data.trim().length > 0,
