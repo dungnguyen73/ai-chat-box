@@ -2,7 +2,7 @@ import { Button } from './button';
 import { FaArrowUp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 type FormData = {
@@ -27,8 +27,15 @@ type Message = {
 const ChatBox = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isBotTyping, setIsBotTyping] = useState(false);
+    const formRef = useRef<HTMLFormElement | null>(null);
+
     const conversationId = useRef(crypto.randomUUID());
     const { register, handleSubmit, reset, formState } = useForm<FormData>();
+
+    useEffect(() => {
+        if (!formRef.current) return;
+        formRef.current.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const onSubmit = async (data: FormData) => {
         setIsBotTyping(true);
@@ -62,12 +69,20 @@ const ChatBox = () => {
         }
     };
 
+    const onCopyMessage = (e: React.ClipboardEvent) => {
+        const selection = window.getSelection().toString().trim();
+        if (selection) {
+            e.preventDefault();
+            e.clipboardData.setData('text/plain', selection);
+        }
+    };
     return (
         <div className="flex flex-col">
             <div className="flex flex-col items-start gap-4 mb-8">
                 {messages.map((message, index) => (
                     <p
                         key={index}
+                        onCopy={onCopyMessage}
                         className={`w-fit p-4 rounded-2xl ${
                             message.role === 'user'
                                 ? 'self-end bg-blue-500 text-white'
@@ -88,6 +103,7 @@ const ChatBox = () => {
             )}
 
             <form
+                ref={formRef}
                 onSubmit={handleSubmit(onSubmit)}
                 onKeyDown={handleKeyDown}
                 className="flex flex-col gap-2 items-end border-2 p-4 border-gray-600 rounded-2xl"
