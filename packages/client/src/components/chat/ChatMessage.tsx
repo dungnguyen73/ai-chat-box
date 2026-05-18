@@ -91,12 +91,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <div
                     className={`mt-1 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
-                    <span className="text-[9px] font-medium text-gray-400">
+                    {/* <span className="text-[9px] font-medium text-gray-400">
                         {new Date().toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
                         })}
-                    </span>
+                    </span> */}
                     {!isUser && (
                         <button
                             onClick={() =>
